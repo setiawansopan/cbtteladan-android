@@ -62,5 +62,5 @@ pengujian (artefak "cbt-teladan-debug-apk"); jangan dibagikan ke siswa.
 
 - Buka folder ini di Android Studio, atau `./gradlew assembleDebug`.
 - URL server: `CBT_EXAM_URL=https://contoh.sch.id ./gradlew assembleDebug`
-  (bawaan `https://cbtteladan.my.id`).
+  (bawaan `https://cbtteladan.com`).
 - Uji unit: `./gradlew testDebugUnitTest`.

@@ -14,7 +14,7 @@ val appVersionCode = appVersionName.split(".").map(String::toInt)
 
 // URL server ujian. Bisa diganti tanpa mengubah kode:
 // CBT_EXAM_URL=https://... ./gradlew assembleRelease
-val examUrl = (System.getenv("CBT_EXAM_URL")?.takeIf { it.isNotBlank() } ?: "https://cbtteladan.my.id")
+val examUrl = (System.getenv("CBT_EXAM_URL")?.takeIf { it.isNotBlank() } ?: "https://cbtteladan.com")
     .trimEnd('/')
 
 // Kunci tanda tangan request (sama dengan CBT_APP_SECRET di .env server).
