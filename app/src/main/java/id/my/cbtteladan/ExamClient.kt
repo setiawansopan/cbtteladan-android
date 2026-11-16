@@ -19,7 +19,7 @@ object ExamClient {
 
     private val examUri: Uri = Uri.parse(examUrl)
 
-    /** Origin halaman ujian, mis. "https://cbtteladan.my.id". */
+    /** Origin halaman ujian, mis. "https://cbtteladan.com". */
     val examOrigin: String = buildString {
         append(examUri.scheme).append("://").append(examUri.host)
         if (examUri.port != -1) append(':').append(examUri.port)
