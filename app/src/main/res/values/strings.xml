@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CBT Teladan</string>
+    <string name="version_label">Versi %1$s</string>
+    <string name="precheck_title">Pemeriksaan Perangkat</string>
+    <string name="check_running">memeriksa…</string>
+    <string name="check_internet">Koneksi ke server ujian</string>
+    <string name="check_battery">Baterai</string>
+    <string name="check_webview">Komponen WebView</string>
+    <string name="check_pin">Sematkan layar</string>
+    <string name="internet_ok">Terhubung (%1$d ms)</string>
+    <string name="internet_fail">Tidak terhubung. Periksa Wi-Fi atau data seluler.</string>
+    <string name="battery_value">%1$d%%%2$s</string>
+    <string name="battery_charging">, mengisi daya</string>
+    <string name="battery_low">%1$d%% (isi daya dulu sebelum ujian)</string>
+    <string name="webview_old">%1$s (terlalu lama, perbarui \"Android System WebView\" di Play Store)</string>
+    <string name="pin_hint">Saat ujian dimulai, layar akan disematkan ke aplikasi ini. Pilih \"Sematkan\" atau \"Pin\" bila diminta. Jika tidak ada pertanyaan dan ujian tidak terbuka, aktifkan \"Sematkan aplikasi\" (App pinning) di Pengaturan &gt; Keamanan.</string>
+    <string name="pin_waiting">Menunggu layar disematkan…</string>
+    <string name="pin_failed">Layar belum disematkan. Ketuk Mulai Ujian lagi dan pilih \"Sematkan\". Jika tetap tidak bisa, aktifkan \"Sematkan aplikasi\" di Pengaturan &gt; Keamanan.</string>
+    <string name="start_exam">Mulai Ujian</string>
+    <string name="exit">Keluar</string>
+    <string name="refresh">Muat Ulang</string>
+    <string name="exit_title">Keluar dari aplikasi ujian?</string>
+    <string name="exit_message">Pastikan jawaban sudah tersimpan. Keluar saat ujian berlangsung dapat dicatat sebagai pelanggaran.</string>
+    <string name="exit_confirm">Ya, keluar</string>
+    <string name="cancel">Batal</string>
+    <string name="unpinned_title">Layar ujian terlepas</string>
+    <string name="unpinned_message">Aplikasi ujian harus tetap disematkan selama ujian. Ketuk tombol di bawah untuk menyematkan kembali.</string>
+    <string name="multiwindow_message">Layar terbagi atau jendela mengambang tidak diizinkan selama ujian. Tutup aplikasi lain lalu kembali ke layar penuh.</string>
+    <string name="repin">Sematkan Lagi</string>
+    <string name="load_error">Halaman ujian tidak bisa dimuat. Periksa koneksi internet, lalu muat ulang.</string>
+    <string name="link_blocked">Tautan ke luar server ujian diblokir.</string>
+    <string name="net_wifi">Wi-Fi</string>
+    <string name="net_cellular">Data</string>
+    <string name="net_other">Online</string>
+    <string name="net_offline">Offline</string>
+</resources>
