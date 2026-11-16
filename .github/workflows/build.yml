@@ -35,6 +35,12 @@ jobs:
         if: env.IS_RELEASE != 'true'
         run: ./gradlew --no-daemon assembleDebug
 
+      # Memastikan build rilis (R8, lint vital) tetap lolos sebelum ada tag.
+      # Tanpa keystore dan tanpa kunci: hasilnya tidak diunggah.
+      - name: Uji build rilis
+        if: env.IS_RELEASE != 'true'
+        run: ./gradlew --no-daemon assembleRelease
+
       - name: Unggah APK debug
         if: env.IS_RELEASE != 'true'
         uses: actions/upload-artifact@v4
