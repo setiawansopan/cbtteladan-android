@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hanya HTTPS dan hanya sertifikat bawaan sistem: sertifikat yang dipasang
+     pengguna (untuk menyadap lalu lintas aplikasi) tidak dipercaya. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
