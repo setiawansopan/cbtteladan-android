@@ -6,6 +6,7 @@ import android.app.ActivityManager
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -13,8 +14,10 @@ import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.os.StatFs
 import android.os.SystemClock
 import android.view.View
 import android.view.WindowInsets
@@ -32,6 +35,8 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.webkit.WebViewCompat
@@ -61,15 +66,22 @@ class MainActivity : Activity() {
     private lateinit var lockMessage: TextView
     private lateinit var errorPanel: View
     private lateinit var pinHint: TextView
-    private lateinit var checkInternet: TextView
-    private lateinit var checkBattery: TextView
-    private lateinit var checkWebView: TextView
-    private lateinit var clock: TextView
-    private lateinit var network: TextView
-    private lateinit var battery: TextView
+    private lateinit var listDevice: LinearLayout
+    private lateinit var listNetwork: LinearLayout
+    private lateinit var summaryText: TextView
+    private lateinit var barClock: TextView
+    private lateinit var barDate: TextView
+    private lateinit var barNetworkIcon: ImageView
+    private lateinit var barNetworkLabel: TextView
+    private lateinit var barBatteryIcon: ImageView
+    private lateinit var barBatteryText: TextView
+
+    /** Semua baris di halaman pengecekan, untuk menyusun ringkasan hasil. */
+    private val checkRows = mutableListOf<CheckRow>()
 
     private val handler = Handler(Looper.getMainLooper())
     private val timeFormat = SimpleDateFormat("HH:mm", Locale("id", "ID"))
+    private val dateFormat = SimpleDateFormat("d MMM", Locale("id", "ID"))
 
     /** Halaman ujian sudah pernah dimuat. */
     private var examLoaded = false
@@ -112,19 +124,24 @@ class MainActivity : Activity() {
         lockMessage = findViewById(R.id.lockMessage)
         errorPanel = findViewById(R.id.errorPanel)
         pinHint = findViewById(R.id.pinHint)
-        checkInternet = findViewById(R.id.checkInternet)
-        checkBattery = findViewById(R.id.checkBattery)
-        checkWebView = findViewById(R.id.checkWebView)
-        clock = findViewById(R.id.clock)
-        network = findViewById(R.id.network)
-        battery = findViewById(R.id.battery)
+        listDevice = findViewById(R.id.listDevice)
+        listNetwork = findViewById(R.id.listNetwork)
+        summaryText = findViewById(R.id.summaryText)
+        barClock = findViewById(R.id.barClock)
+        barDate = findViewById(R.id.barDate)
+        barNetworkIcon = findViewById(R.id.barNetworkIcon)
+        barNetworkLabel = findViewById(R.id.barNetworkLabel)
+        barBatteryIcon = findViewById(R.id.barBatteryIcon)
+        barBatteryText = findViewById(R.id.barBatteryText)
 
         findViewById<TextView>(R.id.versionText).text = getString(R.string.version_label, ExamClient.version)
+        findViewById<TextView>(R.id.barVersion).text =
+            getString(R.string.bar_version, ExamClient.version, getString(R.string.school_name))
         findViewById<Button>(R.id.startButton).setOnClickListener { requestPin() }
         findViewById<Button>(R.id.precheckExitButton).setOnClickListener { exitApp() }
-        findViewById<Button>(R.id.exitButton).setOnClickListener { confirmExit() }
+        findViewById<View>(R.id.exitButton).setOnClickListener { confirmExit() }
         findViewById<Button>(R.id.overlayExitButton).setOnClickListener { confirmExit() }
-        findViewById<Button>(R.id.refreshButton).setOnClickListener { reloadExam() }
+        findViewById<View>(R.id.refreshButton).setOnClickListener { reloadExam() }
         findViewById<Button>(R.id.retryButton).setOnClickListener { reloadExam() }
         findViewById<Button>(R.id.repinButton).setOnClickListener { startPinning() }
 
@@ -434,9 +451,146 @@ class MainActivity : Activity() {
     // Pemeriksaan perangkat dan bilah status
     // ------------------------------------------------------------------
 
-    private fun runPrecheck() {
-        setCheck(checkInternet, R.string.check_internet, getString(R.string.check_running), R.color.text_muted)
+    /** Satu baris di halaman pengecekan: spinner saat memeriksa, lalu ikon hasil. */
+    private class CheckRow(
+        private val progress: View,
+        private val statusBg: View,
+        private val statusIcon: ImageView,
+        private val value: TextView,
+    ) {
+        /** Null selama masih memeriksa. */
+        var status: CheckStatus? = null
+            private set
 
+        fun show(text: String, newStatus: CheckStatus) {
+            val context = value.context
+            status = newStatus
+            value.text = text
+            value.setTextColor(context.getColor(R.color.text))
+            progress.visibility = View.GONE
+            statusBg.visibility = View.VISIBLE
+
+            val (icon, tint, background) = when (newStatus) {
+                CheckStatus.PASS -> Triple(R.drawable.ic_check, R.color.ok, R.color.ok_bg)
+                CheckStatus.WARN -> Triple(R.drawable.ic_warning, R.color.warn, R.color.warn_bg)
+                CheckStatus.FAIL -> Triple(R.drawable.ic_close, R.color.danger, R.color.danger_bg)
+            }
+            statusIcon.setImageResource(icon)
+            statusIcon.imageTintList = ColorStateList.valueOf(context.getColor(tint))
+            statusBg.backgroundTintList = ColorStateList.valueOf(context.getColor(background))
+        }
+    }
+
+    private fun addRow(
+        list: LinearLayout,
+        icon: Int,
+        tint: Int,
+        background: Int,
+        label: Int,
+        requirement: Int? = null,
+    ): CheckRow {
+        val view = layoutInflater.inflate(R.layout.item_check, list, false)
+
+        view.findViewById<ImageView>(R.id.rowIcon).apply {
+            setImageResource(icon)
+            imageTintList = ColorStateList.valueOf(getColor(tint))
+        }
+        view.findViewById<View>(R.id.rowIconBg).backgroundTintList = ColorStateList.valueOf(getColor(background))
+        view.findViewById<TextView>(R.id.rowLabel).setText(label)
+        view.findViewById<TextView>(R.id.rowReq).apply {
+            if (requirement != null) setText(requirement) else visibility = View.GONE
+        }
+        val value = view.findViewById<TextView>(R.id.rowValue).apply {
+            setText(R.string.checking)
+            setTextColor(getColor(R.color.faint))
+        }
+
+        list.addView(view)
+
+        return CheckRow(
+            view.findViewById(R.id.rowProgress),
+            view.findViewById(R.id.rowStatusBg),
+            view.findViewById(R.id.rowStatus),
+            value,
+        ).also { checkRows.add(it) }
+    }
+
+    private fun runPrecheck() {
+        listDevice.removeAllViews()
+        listNetwork.removeAllViews()
+        checkRows.clear()
+        summaryText.setText(R.string.summary_checking)
+        summaryText.setTextColor(getColor(R.color.text_muted))
+
+        val device = addRow(listDevice, R.drawable.ic_phone, R.color.ic_blue, R.color.ic_blue_bg, R.string.row_device)
+        val androidRow = addRow(listDevice, R.drawable.ic_info, R.color.ic_indigo, R.color.ic_indigo_bg, R.string.row_android, R.string.req_android)
+        val cpu = addRow(listDevice, R.drawable.ic_board, R.color.ic_orange, R.color.ic_orange_bg, R.string.row_cpu, R.string.req_cpu)
+        val ram = addRow(listDevice, R.drawable.ic_memory, R.color.ic_purple, R.color.ic_purple_bg, R.string.row_ram, R.string.req_ram)
+        val storage = addRow(listDevice, R.drawable.ic_storage, R.color.ic_amber, R.color.ic_amber_bg, R.string.row_storage, R.string.req_storage)
+        val screen = addRow(listDevice, R.drawable.ic_screen, R.color.ic_teal, R.color.ic_teal_bg, R.string.row_screen)
+        val battery = addRow(listDevice, R.drawable.ic_battery, R.color.ic_green, R.color.ic_green_bg, R.string.row_battery, R.string.req_battery)
+
+        val network = addRow(listNetwork, R.drawable.ic_wifi, R.color.ic_blue, R.color.ic_blue_bg, R.string.row_network)
+        val server = addRow(listNetwork, R.drawable.ic_public, R.color.ic_green, R.color.ic_green_bg, R.string.row_server, R.string.req_server)
+        val webViewRow = addRow(listNetwork, R.drawable.ic_extension, R.color.ic_pink, R.color.ic_pink_bg, R.string.row_webview, R.string.req_webview)
+
+        // Perangkat keras dan sistem
+        val maker = Build.MANUFACTURER.replaceFirstChar { it.uppercase() }
+        device.show(
+            if (Build.MODEL.startsWith(Build.MANUFACTURER, ignoreCase = true)) Build.MODEL else "$maker ${Build.MODEL}",
+            CheckStatus.PASS,
+        )
+        androidRow.show(getString(R.string.val_android, Build.VERSION.RELEASE, Build.VERSION.SDK_INT), CheckStatus.PASS)
+
+        val cores = Runtime.getRuntime().availableProcessors()
+        cpu.show(getString(R.string.val_cores, cores), SystemCheck.cpu(cores))
+
+        val totalRam = totalMemoryBytes()
+        ram.show(SystemCheck.formatBytes(totalRam), SystemCheck.ram(totalRam))
+
+        val stat = StatFs(Environment.getDataDirectory().path)
+        storage.show(
+            getString(R.string.val_storage, SystemCheck.formatBytes(stat.availableBytes), SystemCheck.formatBytes(stat.totalBytes)),
+            SystemCheck.storage(stat.availableBytes),
+        )
+
+        val (width, height) = screenSize()
+        screen.show(
+            getString(R.string.val_screen, minOf(width, height), maxOf(width, height), resources.displayMetrics.densityDpi),
+            CheckStatus.PASS,
+        )
+
+        val (level, charging) = batteryState()
+        battery.show(
+            when {
+                level == null -> getString(R.string.val_unknown)
+                charging -> getString(R.string.val_battery_charging, level)
+                else -> getString(R.string.val_battery, level)
+            },
+            SystemCheck.battery(level, charging),
+        )
+
+        // Koneksi
+        when (networkKind()) {
+            NetworkKind.WIFI -> network.show(getString(R.string.val_net_wifi), CheckStatus.PASS)
+            NetworkKind.CELLULAR -> network.show(getString(R.string.val_net_cell), CheckStatus.PASS)
+            NetworkKind.OTHER -> network.show(getString(R.string.val_net_other), CheckStatus.PASS)
+            NetworkKind.NONE -> network.show(getString(R.string.val_net_none), CheckStatus.FAIL)
+        }
+
+        val webViewVersion = WebViewCompat.getCurrentWebViewPackage(this)?.versionName
+        val major = webViewVersion?.substringBefore('.')?.toIntOrNull()
+        val webViewStatus = SystemCheck.webView(major)
+        webViewRow.show(
+            when {
+                webViewVersion == null -> getString(R.string.val_unknown)
+                webViewStatus != CheckStatus.PASS -> getString(R.string.val_webview_old, webViewVersion)
+                else -> webViewVersion
+            },
+            webViewStatus,
+        )
+
+        // Server ujian: satu-satunya pemeriksaan yang butuh waktu, jadi jalan di thread lain
         thread(name = "cbt-precheck") {
             val started = SystemClock.elapsedRealtime()
             val reachable = try {
@@ -451,53 +605,94 @@ class MainActivity : Activity() {
             } catch (e: Exception) {
                 false
             }
-            val elapsed = SystemClock.elapsedRealtime() - started
+            val elapsed = (SystemClock.elapsedRealtime() - started).toInt()
 
             runOnUiThread {
                 if (isFinishing || isDestroyed) return@runOnUiThread
-                if (reachable) {
-                    setCheck(checkInternet, R.string.check_internet, getString(R.string.internet_ok, elapsed.toInt()), R.color.ok)
-                } else {
-                    setCheck(checkInternet, R.string.check_internet, getString(R.string.internet_fail), R.color.danger)
-                }
+
+                val status = SystemCheck.server(reachable, elapsed)
+                server.show(
+                    when (status) {
+                        CheckStatus.FAIL -> getString(R.string.val_server_fail)
+                        CheckStatus.WARN -> getString(R.string.val_server_slow, elapsed)
+                        CheckStatus.PASS -> getString(R.string.val_server_ok, elapsed)
+                    },
+                    status,
+                )
+                updateSummary()
             }
         }
 
-        val (level, charging) = batteryState()
-        when {
-            level == null -> setCheck(checkBattery, R.string.check_battery, "-", R.color.text_muted)
-            level < LOW_BATTERY && !charging ->
-                setCheck(checkBattery, R.string.check_battery, getString(R.string.battery_low, level), R.color.warn)
-            else -> setCheck(
-                checkBattery,
-                R.string.check_battery,
-                getString(R.string.battery_value, level, if (charging) getString(R.string.battery_charging) else ""),
-                R.color.ok,
-            )
-        }
-
-        val webViewVersion = WebViewCompat.getCurrentWebViewPackage(this)?.versionName
-        val major = webViewVersion?.substringBefore('.')?.toIntOrNull()
-        when {
-            webViewVersion == null -> setCheck(checkWebView, R.string.check_webview, "-", R.color.text_muted)
-            major != null && major < MIN_WEBVIEW_MAJOR ->
-                setCheck(checkWebView, R.string.check_webview, getString(R.string.webview_old, webViewVersion), R.color.warn)
-            else -> setCheck(checkWebView, R.string.check_webview, webViewVersion, R.color.ok)
-        }
+        updateSummary()
     }
 
-    private fun setCheck(view: TextView, labelRes: Int, value: String, colorRes: Int) {
-        view.text = "${getString(labelRes)}: $value"
-        view.setTextColor(getColor(colorRes))
+    /** Ringkasan di bawah daftar; baru tampil setelah semua pemeriksaan selesai. */
+    private fun updateSummary() {
+        if (checkRows.any { it.status == null }) return
+
+        val results = checkRows.mapNotNull { it.status }
+        val attention = results.count { it != CheckStatus.PASS }
+
+        if (attention == 0) {
+            summaryText.setText(R.string.summary_ok)
+        } else {
+            summaryText.text = getString(R.string.summary_warn, attention)
+        }
+        summaryText.setTextColor(
+            getColor(
+                when (SystemCheck.worst(results)) {
+                    CheckStatus.PASS -> R.color.ok
+                    CheckStatus.WARN -> R.color.warn
+                    CheckStatus.FAIL -> R.color.danger
+                },
+            ),
+        )
     }
 
+    private fun totalMemoryBytes(): Long {
+        val info = ActivityManager.MemoryInfo()
+        getSystemService(ActivityManager::class.java)?.getMemoryInfo(info)
+        return info.totalMem
+    }
+
+    @Suppress("DEPRECATION")
+    private fun screenSize(): Pair<Int, Int> {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val bounds = windowManager.maximumWindowMetrics.bounds
+            return bounds.width() to bounds.height()
+        }
+        val metrics = android.util.DisplayMetrics()
+        windowManager.defaultDisplay.getRealMetrics(metrics)
+        return metrics.widthPixels to metrics.heightPixels
+    }
+
+    /** Bilah bawah selama ujian: jam, jaringan, dan baterai, seperti taskbar di aplikasi Windows. */
     private fun updateStatusBar() {
-        clock.text = timeFormat.format(Date())
+        val now = Date()
+        barClock.text = timeFormat.format(now)
+        barDate.text = dateFormat.format(now)
 
         val (level, charging) = batteryState()
-        battery.text = if (level == null) "" else "$level%" + if (charging) " +" else ""
+        val low = SystemCheck.battery(level, charging) != CheckStatus.PASS
+        val batteryColor = ColorStateList.valueOf(getColor(if (low) R.color.accent_red else R.color.on_bar))
+        barBatteryText.text = level?.let { "$it%" } ?: ""
+        barBatteryText.setTextColor(batteryColor)
+        barBatteryIcon.setImageResource(if (charging) R.drawable.ic_battery_charging else R.drawable.ic_battery)
+        barBatteryIcon.imageTintList = batteryColor
 
-        network.text = getString(networkLabel())
+        val kind = networkKind()
+        barNetworkIcon.setImageResource(if (kind == NetworkKind.CELLULAR) R.drawable.ic_cell else R.drawable.ic_wifi)
+        barNetworkIcon.alpha = if (kind == NetworkKind.NONE) 0.4f else 1f
+        barNetworkLabel.setText(
+            when (kind) {
+                NetworkKind.WIFI -> R.string.bar_wifi
+                NetworkKind.CELLULAR -> R.string.bar_cell
+                NetworkKind.OTHER -> R.string.bar_online
+                NetworkKind.NONE -> R.string.bar_offline
+            },
+        )
+        // Layar sempit: cukup ikon agar bilah tidak penuh
+        barNetworkLabel.visibility = if (resources.configuration.screenWidthDp >= 400) View.VISIBLE else View.GONE
     }
 
     private fun batteryState(): Pair<Int?, Boolean> {
@@ -506,13 +701,15 @@ class MainActivity : Activity() {
         return level to manager.isCharging
     }
 
-    private fun networkLabel(): Int {
-        val manager = getSystemService(ConnectivityManager::class.java) ?: return R.string.net_offline
-        val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return R.string.net_offline
+    private enum class NetworkKind { WIFI, CELLULAR, OTHER, NONE }
+
+    private fun networkKind(): NetworkKind {
+        val manager = getSystemService(ConnectivityManager::class.java) ?: return NetworkKind.NONE
+        val capabilities = manager.getNetworkCapabilities(manager.activeNetwork) ?: return NetworkKind.NONE
         return when {
-            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> R.string.net_wifi
-            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> R.string.net_cellular
-            else -> R.string.net_other
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkKind.WIFI
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkKind.CELLULAR
+            else -> NetworkKind.OTHER
         }
     }
 
@@ -536,7 +733,5 @@ class MainActivity : Activity() {
         const val REQUEST_FILE = 41
         const val MONITOR_INTERVAL_MS = 1000L
         const val PIN_TIMEOUT_MS = 30_000L
-        const val LOW_BATTERY = 20
-        const val MIN_WEBVIEW_MAJOR = 80
     }
 }
