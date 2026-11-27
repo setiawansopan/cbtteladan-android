@@ -48,6 +48,14 @@ Headers reach the server through two paths, both needed:
 A determined student can still extract it from the APK; the goal is to stop
 casual User-Agent spoofing from a normal browser.
 
+## Self-view camera
+
+`SelfPreview` (Camera2 + `TextureView`, no AndroidX) shows the front camera in a draggable
+corner box (`camBox`) during the exam, as a self-monitoring aid like the desktop webcam
+preview. Frames are only rendered locally: never recorded, stored or sent. The web page still
+gets no camera/mic (`onPermissionRequest` denies). Optional: no camera/permission => no box.
+Geometry helpers live in `PreviewMath` (JVM-tested).
+
 ## Exam lockdown
 
 - Screen pinning (`startLockTask`) is required before the exam loads; a 1s monitor

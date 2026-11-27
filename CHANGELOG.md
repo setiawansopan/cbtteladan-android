@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.0.1
+
+- Cermin diri selama ujian, seperti preview webcam di aplikasi Windows: kamera depan tampil
+  kecil di pojok layar dengan tanda LIVE. Hanya ditampilkan di layar siswa; gambar tidak
+  direkam, tidak disimpan, dan tidak dikirim ke server. Kotaknya bisa digeser.
+- Halaman pengecekan perangkat menampilkan baris "Kamera depan" (opsional, tidak memengaruhi
+  ringkasan) dan meminta izin kamera. Tanpa kamera atau izin, ujian tetap berjalan tanpa preview.
+- Halaman ujian tetap tidak boleh memakai kamera/mikrofon (izin web ditolak).
+
 ## 5.0.0
 
 - Halaman pengecekan perangkat dirombak: kartu berikon dengan penanda lulus/peringatan/gagal,

@@ -48,6 +48,57 @@
                     android:layout_marginTop="16dp"
                     android:text="@string/refresh" />
             </LinearLayout>
+
+            <!-- Cermin diri (kamera depan), hanya tampil di layar siswa. Bisa digeser. -->
+            <FrameLayout
+                android:id="@+id/camBox"
+                android:layout_width="@dimen/cam_size"
+                android:layout_height="@dimen/cam_size"
+                android:layout_gravity="top|start"
+                android:layout_margin="12dp"
+                android:background="@drawable/bg_cam_clip"
+                android:elevation="6dp"
+                android:visibility="gone">
+
+                <TextureView
+                    android:id="@+id/camView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:background="@drawable/bg_cam_bar"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="8dp"
+                    android:paddingTop="10dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="5dp">
+
+                    <View
+                        android:id="@+id/camDot"
+                        android:layout_width="7dp"
+                        android:layout_height="7dp"
+                        android:background="@drawable/bg_cam_dot" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="5dp"
+                        android:letterSpacing="0.1"
+                        android:text="@string/cam_live"
+                        android:textColor="#FFFFFF"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_cam_border" />
+            </FrameLayout>
         </FrameLayout>
 
         <!-- Garis pemisah tipis di atas bilah -->

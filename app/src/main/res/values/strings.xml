@@ -18,6 +18,7 @@
     <string name="row_storage">Penyimpanan kosong</string>
     <string name="row_screen">Layar</string>
     <string name="row_battery">Baterai</string>
+    <string name="row_camera">Kamera depan</string>
     <string name="row_network">Jaringan</string>
     <string name="row_server">Server ujian</string>
     <string name="row_webview">Komponen WebView</string>
@@ -27,6 +28,7 @@
     <string name="req_ram">· min. 2 GB</string>
     <string name="req_storage">· min. 500 MB</string>
     <string name="req_battery">· min. 20% atau mengisi</string>
+    <string name="req_optional">· opsional</string>
     <string name="req_server">· harus terhubung</string>
     <string name="req_webview">· min. versi 80</string>
 
@@ -35,6 +37,11 @@
     <string name="val_storage">%1$s dari %2$s</string>
     <string name="val_screen">%1$d × %2$d piksel · %3$d dpi</string>
     <string name="val_battery">%1$d%%</string>
+    <string name="val_cam_ready">Siap</string>
+    <string name="val_cam_wait">Menunggu izin kamera</string>
+    <string name="val_cam_denied">Izin kamera ditolak (Pengaturan &gt; Aplikasi)</string>
+    <string name="val_cam_none">Tidak terdeteksi</string>
+    <string name="cam_live">LIVE</string>
     <string name="val_battery_charging">%1$d%% · mengisi daya</string>
     <string name="val_unknown">Tidak diketahui</string>
     <string name="val_webview_old">%1$s (perbarui \"Android System WebView\" di Play Store)</string>
