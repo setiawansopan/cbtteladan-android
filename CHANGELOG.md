@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.0.2
+
+- Perbaikan arah kamera depan di tablet yang dipakai lanskap: gambar kini diputar mengikuti
+  rotasi layar sehingga tegak (sebelumnya tampil miring), dan disesuaikan ulang saat layar diputar.
+- Bila di suatu tablet gambar masih miring, ketuk kotak kamera untuk memutarnya 90 derajat;
+  pilihan disimpan. Kotak tetap bisa digeser.
+
 ## 5.0.1
 
 - Cermin diri selama ujian, seperti preview webcam di aplikasi Windows: kamera depan tampil

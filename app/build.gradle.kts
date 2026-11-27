@@ -8,7 +8,7 @@ plugins {
 
 // Versi aplikasi. Server menolak versi di bawah "Versi minimum" di halaman
 // Admin > Akses Siswa, jadi naikkan versi ini setiap rilis.
-val appVersionName = "5.0.1"
+val appVersionName = "5.0.2"
 val appVersionCode = appVersionName.split(".").map(String::toInt)
     .let { (major, minor, patch) -> major * 10000 + minor * 100 + patch }
 

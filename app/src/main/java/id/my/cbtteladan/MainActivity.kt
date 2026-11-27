@@ -10,6 +10,7 @@ import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -25,6 +26,7 @@ import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.TextureView
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewOutlineProvider
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -93,6 +95,9 @@ class MainActivity : Activity() {
     private var cameraAsked = false
     private var dragDx = 0f
     private var dragDy = 0f
+    private var dragStartX = 0f
+    private var dragStartY = 0f
+    private var dragMoved = false
 
     private val handler = Handler(Looper.getMainLooper())
     private val timeFormat = SimpleDateFormat("HH:mm", Locale("id", "ID"))
@@ -175,6 +180,12 @@ class MainActivity : Activity() {
         startSelfPreview()
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Layar diputar (tablet dipakai lanskap): sesuaikan lagi arah gambar kamera
+        selfPreview.refresh()
+    }
+
     override fun onPause() {
         // Menjeda WebView membuat halaman "tersembunyi", sehingga halaman
         // ujian mencatat pelanggaran saat siswa meninggalkan aplikasi.
@@ -231,17 +242,35 @@ class MainActivity : Activity() {
         camBox.clipToOutline = true
         selfPreview = SelfPreview(this, findViewById<TextureView>(R.id.camView)) { active -> onSelfPreviewActive(active) }
 
-        // Kotak bisa digeser agar tidak menutupi soal
+        selfPreview.extraTurns = getSharedPreferences(PREFS, MODE_PRIVATE).getInt(PREF_CAM_TURNS, 0).coerceIn(0, 3)
+
+        // Kotak bisa digeser agar tidak menutupi soal; ketuk untuk memutar 90 derajat
+        // bila gambar masih miring di tablet tertentu (pilihan disimpan).
+        val touchSlop = ViewConfiguration.get(this).scaledTouchSlop
         camBox.setOnTouchListener { view, event ->
             val parent = view.parent as View
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     dragDx = view.x - event.rawX
                     dragDy = view.y - event.rawY
+                    dragStartX = event.rawX
+                    dragStartY = event.rawY
+                    dragMoved = false
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    view.x = (event.rawX + dragDx).coerceIn(0f, (parent.width - view.width).toFloat().coerceAtLeast(0f))
-                    view.y = (event.rawY + dragDy).coerceIn(0f, (parent.height - view.height).toFloat().coerceAtLeast(0f))
+                    if (Math.abs(event.rawX - dragStartX) > touchSlop || Math.abs(event.rawY - dragStartY) > touchSlop) {
+                        dragMoved = true
+                    }
+                    if (dragMoved) {
+                        view.x = (event.rawX + dragDx).coerceIn(0f, (parent.width - view.width).toFloat().coerceAtLeast(0f))
+                        view.y = (event.rawY + dragDy).coerceIn(0f, (parent.height - view.height).toFloat().coerceAtLeast(0f))
+                    }
+                }
+                MotionEvent.ACTION_UP -> if (!dragMoved) {
+                    val turns = (selfPreview.extraTurns + 1) % 4
+                    selfPreview.extraTurns = turns
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit().putInt(PREF_CAM_TURNS, turns).apply()
+                    selfPreview.refresh()
                 }
             }
             true
@@ -843,6 +872,8 @@ class MainActivity : Activity() {
     private companion object {
         const val REQUEST_FILE = 41
         const val REQUEST_CAMERA = 42
+        const val PREFS = "cbt_teladan"
+        const val PREF_CAM_TURNS = "cam_turns"
         const val MONITOR_INTERVAL_MS = 1000L
         const val PIN_TIMEOUT_MS = 30_000L
     }
