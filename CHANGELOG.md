@@ -1,17 +1,13 @@
 # Changelog
 
-## 5.0.2
-
-- Perbaikan arah kamera depan di tablet yang dipakai lanskap: gambar kini diputar mengikuti
-  rotasi layar sehingga tegak (sebelumnya tampil miring), dan disesuaikan ulang saat layar diputar.
-- Bila di suatu tablet gambar masih miring, ketuk kotak kamera untuk memutarnya 90 derajat;
-  pilihan disimpan. Kotak tetap bisa digeser.
-
 ## 5.0.1
 
 - Cermin diri selama ujian, seperti preview webcam di aplikasi Windows: kamera depan tampil
   kecil di pojok layar dengan tanda LIVE. Hanya ditampilkan di layar siswa; gambar tidak
   direkam, tidak disimpan, dan tidak dikirim ke server. Kotaknya bisa digeser.
+- Gambar kamera diputar mengikuti rotasi layar sehingga tegak di tablet yang dipakai lanskap,
+  dan disesuaikan ulang saat layar diputar. Bila di suatu tablet masih miring, ketuk kotak
+  kamera untuk memutarnya 90 derajat; pilihan disimpan.
 - Halaman pengecekan perangkat menampilkan baris "Kamera depan" (opsional, tidak memengaruhi
   ringkasan) dan meminta izin kamera. Tanpa kamera atau izin, ujian tetap berjalan tanpa preview.
 - Halaman ujian tetap tidak boleh memakai kamera/mikrofon (izin web ditolak).
