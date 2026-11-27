@@ -35,4 +35,6 @@
     <color name="ic_pink_bg">#FCE7F3</color>
     <color name="ic_amber">#B45309</color>
     <color name="ic_amber_bg">#FEF3C7</color>
+    <color name="ic_cyan">#0891B2</color>
+    <color name="ic_cyan_bg">#CFFAFE</color>
 </resources>

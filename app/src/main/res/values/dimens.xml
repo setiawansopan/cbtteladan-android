@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sisi kotak preview kamera depan selama ujian -->
+    <dimen name="cam_size">96dp</dimen>
+</resources>

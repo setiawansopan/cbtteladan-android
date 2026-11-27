@@ -1,5 +1,8 @@
 package id.my.cbtteladan
 
+import android.Manifest
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.ActivityManager
@@ -19,7 +22,10 @@ import android.os.Handler
 import android.os.Looper
 import android.os.StatFs
 import android.os.SystemClock
+import android.view.MotionEvent
+import android.view.TextureView
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
@@ -78,6 +84,15 @@ class MainActivity : Activity() {
 
     /** Semua baris di halaman pengecekan, untuk menyusun ringkasan hasil. */
     private val checkRows = mutableListOf<CheckRow>()
+
+    // Cermin diri: kamera depan ditampilkan di layar siswa saja
+    private lateinit var camBox: View
+    private lateinit var selfPreview: SelfPreview
+    private var camPulse: ObjectAnimator? = null
+    private var cameraRow: CheckRow? = null
+    private var cameraAsked = false
+    private var dragDx = 0f
+    private var dragDy = 0f
 
     private val handler = Handler(Looper.getMainLooper())
     private val timeFormat = SimpleDateFormat("HH:mm", Locale("id", "ID"))
@@ -146,7 +161,9 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.repinButton).setOnClickListener { startPinning() }
 
         setupWebView()
+        setupSelfPreview()
         runPrecheck()
+        requestCameraIfNeeded()
     }
 
     override fun onResume() {
@@ -155,17 +172,20 @@ class MainActivity : Activity() {
         if (!overlayShown) webView.onResume()
         handler.removeCallbacks(monitor)
         handler.post(monitor)
+        startSelfPreview()
     }
 
     override fun onPause() {
         // Menjeda WebView membuat halaman "tersembunyi", sehingga halaman
         // ujian mencatat pelanggaran saat siswa meninggalkan aplikasi.
         webView.onPause()
+        stopSelfPreview()
         handler.removeCallbacks(monitor)
         super.onPause()
     }
 
     override fun onDestroy() {
+        stopSelfPreview()
         handler.removeCallbacksAndMessages(null)
         webView.destroy()
         super.onDestroy()
@@ -189,6 +209,94 @@ class MainActivity : Activity() {
             return
         }
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CAMERA) {
+            cameraAsked = true
+            updateCameraRow()
+            startSelfPreview()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Cermin diri (kamera depan)
+    // ------------------------------------------------------------------
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupSelfPreview() {
+        camBox = findViewById(R.id.camBox)
+        camBox.outlineProvider = ViewOutlineProvider.BACKGROUND
+        camBox.clipToOutline = true
+        selfPreview = SelfPreview(this, findViewById<TextureView>(R.id.camView)) { active -> onSelfPreviewActive(active) }
+
+        // Kotak bisa digeser agar tidak menutupi soal
+        camBox.setOnTouchListener { view, event ->
+            val parent = view.parent as View
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    dragDx = view.x - event.rawX
+                    dragDy = view.y - event.rawY
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    view.x = (event.rawX + dragDx).coerceIn(0f, (parent.width - view.width).toFloat().coerceAtLeast(0f))
+                    view.y = (event.rawY + dragDy).coerceIn(0f, (parent.height - view.height).toFloat().coerceAtLeast(0f))
+                }
+            }
+            true
+        }
+    }
+
+    private fun requestCameraIfNeeded() {
+        updateCameraRow()
+        if (selfPreview.hasFrontCamera() && !selfPreview.hasPermission()) {
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA)
+        }
+    }
+
+    /** Baris kamera di halaman pengecekan bersifat opsional: tidak masuk ringkasan. */
+    private fun updateCameraRow() {
+        val row = cameraRow ?: return
+        when {
+            !selfPreview.hasFrontCamera() -> row.show(getString(R.string.val_cam_none), CheckStatus.WARN)
+            selfPreview.hasPermission() -> row.show(getString(R.string.val_cam_ready), CheckStatus.PASS)
+            cameraAsked -> row.show(getString(R.string.val_cam_denied), CheckStatus.WARN)
+            else -> row.show(getString(R.string.val_cam_wait), CheckStatus.WARN)
+        }
+    }
+
+    private fun startSelfPreview() {
+        if (examContainer.visibility != View.VISIBLE) return
+        if (!selfPreview.hasFrontCamera() || !selfPreview.hasPermission()) {
+            camBox.visibility = View.GONE
+            return
+        }
+        // TextureView hanya mendapat gambar bila terlihat di layar
+        camBox.visibility = View.VISIBLE
+        selfPreview.start()
+    }
+
+    private fun stopSelfPreview() {
+        selfPreview.stop()
+        onSelfPreviewActive(false)
+    }
+
+    private fun onSelfPreviewActive(active: Boolean) {
+        if (active) {
+            if (camPulse == null) {
+                camPulse = ObjectAnimator.ofFloat(findViewById<View>(R.id.camDot), View.ALPHA, 1f, 0.25f).apply {
+                    duration = 700
+                    repeatCount = ValueAnimator.INFINITE
+                    repeatMode = ValueAnimator.REVERSE
+                }
+            }
+            camPulse?.start()
+        } else {
+            camPulse?.cancel()
+            findViewById<View>(R.id.camDot).alpha = 1f
+            camBox.visibility = View.GONE
+        }
     }
 
     // ------------------------------------------------------------------
@@ -263,6 +371,7 @@ class MainActivity : Activity() {
         precheck.visibility = View.GONE
         examContainer.visibility = View.VISIBLE
         updateStatusBar()
+        startSelfPreview()
         if (!examLoaded) {
             examLoaded = true
             loadExam(ExamClient.examUrl)
@@ -529,6 +638,8 @@ class MainActivity : Activity() {
         val storage = addRow(listDevice, R.drawable.ic_storage, R.color.ic_amber, R.color.ic_amber_bg, R.string.row_storage, R.string.req_storage)
         val screen = addRow(listDevice, R.drawable.ic_screen, R.color.ic_teal, R.color.ic_teal_bg, R.string.row_screen)
         val battery = addRow(listDevice, R.drawable.ic_battery, R.color.ic_green, R.color.ic_green_bg, R.string.row_battery, R.string.req_battery)
+        cameraRow = addRow(listDevice, R.drawable.ic_camera, R.color.ic_cyan, R.color.ic_cyan_bg, R.string.row_camera, R.string.req_optional)
+            .also { checkRows.remove(it) }
 
         val network = addRow(listNetwork, R.drawable.ic_wifi, R.color.ic_blue, R.color.ic_blue_bg, R.string.row_network)
         val server = addRow(listNetwork, R.drawable.ic_public, R.color.ic_green, R.color.ic_green_bg, R.string.row_server, R.string.req_server)
@@ -731,6 +842,7 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REQUEST_FILE = 41
+        const val REQUEST_CAMERA = 42
         const val MONITOR_INTERVAL_MS = 1000L
         const val PIN_TIMEOUT_MS = 30_000L
     }
