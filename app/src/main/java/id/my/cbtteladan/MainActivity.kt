@@ -169,6 +169,7 @@ class MainActivity : Activity() {
         setupSelfPreview()
         runPrecheck()
         requestCameraIfNeeded()
+        checkForUpdate()
     }
 
     override fun onResume() {
@@ -228,6 +229,77 @@ class MainActivity : Activity() {
             cameraAsked = true
             updateCameraRow()
             startSelfPreview()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Pemberitahuan versi baru
+    // ------------------------------------------------------------------
+
+    /** Tanya server apakah ada versi baru. Gagal (offline, dll.) diam saja: ujian tidak terganggu. */
+    private fun checkForUpdate() {
+        thread(name = "cbt-update") {
+            val info = try {
+                val connection = URL(ExamClient.examUrl + "/app-update").openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 6000
+                connection.readTimeout = 6000
+                connection.instanceFollowRedirects = false
+                try {
+                    if (connection.responseCode != 200) return@thread
+                    val body = connection.inputStream.bufferedReader().use { it.readText().take(8192) }
+                    JSONObject(body)
+                } finally {
+                    connection.disconnect()
+                }
+            } catch (e: Exception) {
+                return@thread
+            }
+
+            val androidInfo = info.optJSONObject("android")
+            val latest = androidInfo?.takeUnless { it.isNull("latest") }?.optString("latest")
+            val url = androidInfo?.takeUnless { it.isNull("url") }?.optString("url")
+            val minimum = info.takeUnless { it.isNull("minimum") }?.optString("minimum")
+
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) showUpdate(UpdateCheck.status(ExamClient.version, latest, minimum), latest, url)
+            }
+        }
+    }
+
+    private fun showUpdate(status: UpdateStatus, latest: String?, url: String?) {
+        if (status == UpdateStatus.NONE) return
+
+        val required = status == UpdateStatus.REQUIRED
+        val color = getColor(if (required) R.color.danger else R.color.warn)
+        findViewById<View>(R.id.updateCard).apply {
+            backgroundTintList = ColorStateList.valueOf(getColor(if (required) R.color.danger_bg else R.color.warn_bg))
+            visibility = View.VISIBLE
+        }
+        findViewById<TextView>(R.id.updateTitle).apply {
+            setText(if (required) R.string.update_title_required else R.string.update_title_available)
+            setTextColor(color)
+        }
+        findViewById<TextView>(R.id.updateMessage).text = if (required) {
+            getString(R.string.update_message_required, latest ?: "")
+        } else {
+            getString(R.string.update_message_available, latest ?: "", ExamClient.version)
+        }
+        findViewById<Button>(R.id.updateButton).apply {
+            visibility = if (UpdateCheck.isSafeUrl(url)) View.VISIBLE else View.GONE
+            setOnClickListener {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (e: ActivityNotFoundException) {
+                    // Tidak ada aplikasi peramban
+                }
+            }
+        }
+
+        // Selama ujian cukup penanda kecil di bilah bawah
+        findViewById<TextView>(R.id.barVersion).apply {
+            text = getString(R.string.bar_version_update, ExamClient.version)
+            setTextColor(getColor(R.color.bar_update))
         }
     }
 

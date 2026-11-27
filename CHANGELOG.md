@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.0.3
+
+- Pemberitahuan versi baru: halaman pengecekan perangkat menampilkan kartu "Versi baru tersedia"
+  dengan tombol Unduh bila admin sudah mengisi versi terbaru di server (`/app-update`). Selama
+  ujian hanya ada penanda kecil "ada versi baru" di bilah bawah. Versi di bawah minimum server
+  menampilkan kartu merah (login memang ditolak server sampai diperbarui).
+- Gagal memeriksa (offline atau server bermasalah) tidak menampilkan apa pun dan tidak
+  mengganggu ujian. Aplikasi hanya memberi tahu; pemasangan tetap manual.
+
 ## 5.0.2
 
 - Perbaikan arah kamera depan di tablet yang dipakai lanskap: gambar kini diputar mengikuti

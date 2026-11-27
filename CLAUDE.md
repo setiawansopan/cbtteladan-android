@@ -48,6 +48,14 @@ Headers reach the server through two paths, both needed:
 A determined student can still extract it from the APK; the goal is to stop
 casual User-Agent spoofing from a normal browser.
 
+## Update notice
+
+At start the app fetches `<EXAM_URL>/app-update` (public JSON: `android.latest`/`android.url`,
+`minimum`, set by the admin in Aplikasi Siswa). `UpdateCheck.status` (JVM-tested) decides
+NONE / AVAILABLE / REQUIRED; the precheck shows a card with a download button (https links only,
+opened in the browser before screen pinning) and the exam bar shows a small marker. Failures are
+silent. The app never installs updates itself.
+
 ## Self-view camera
 
 `SelfPreview` (Camera2 + `TextureView`, no AndroidX) shows the front camera in a draggable
