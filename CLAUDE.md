@@ -54,7 +54,10 @@ casual User-Agent spoofing from a normal browser.
 corner box (`camBox`) during the exam, as a self-monitoring aid like the desktop webcam
 preview. Frames are only rendered locally: never recorded, stored or sent. The web page still
 gets no camera/mic (`onPermissionRequest` denies). Optional: no camera/permission => no box.
-Geometry helpers live in `PreviewMath` (JVM-tested).
+Geometry helpers live in `PreviewMath` (JVM-tested). Camera2 rotates frames upright for the
+device's *natural* orientation only, so `SelfPreview.fitToView` compensates for the current
+display rotation (as in Google's Camera2Basic) and centre-crops; tapping the box adds a persisted
+90-degree turn as a fallback for tablets where the guess is wrong.
 
 ## Exam lockdown
 

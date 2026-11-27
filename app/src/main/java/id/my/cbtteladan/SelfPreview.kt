@@ -223,6 +223,15 @@ class SelfPreview(
         }
     }
 
+    /** Putaran tambahan 90 derajat pilihan siswa (0-3), cadangan bila gambar masih miring di suatu tablet. */
+    @Volatile
+    var extraTurns = 0
+
+    /** Hitung ulang setelah layar diputar. */
+    fun refresh() {
+        textureView.post { fitToView() }
+    }
+
     /** Putar dan potong gambar agar tegak, memenuhi kotak, dan tidak gepeng. */
     private fun fitToView() {
         val size = previewSize ?: return
@@ -230,26 +239,23 @@ class SelfPreview(
         val viewHeight = textureView.height
         if (viewWidth == 0 || viewHeight == 0) return
 
-        val portrait = PreviewMath.isPortrait(sensorOrientation, displayDegrees(), front = true)
-        val contentWidth = if (portrait) size.second else size.first
-        val contentHeight = if (portrait) size.first else size.second
-        val (scaleX, scaleY) = PreviewMath.cropScale(contentWidth, contentHeight, viewWidth, viewHeight)
+        val (width, height) = PreviewMath.uprightSize(sensorOrientation, size.first, size.second)
+        val fit = PreviewMath.fit(width, height, viewWidth, viewHeight, displayRotation(), extraTurns)
+        val centerX = viewWidth / 2f
+        val centerY = viewHeight / 2f
 
         textureView.setTransform(
-            Matrix().apply { postScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f) },
+            Matrix().apply {
+                postScale(fit.preX, fit.preY, centerX, centerY)
+                postRotate(fit.degrees, centerX, centerY)
+                postScale(fit.scale, fit.scale, centerX, centerY)
+            },
         )
         // Cermin: seperti bercermin, kiri-kanan dibalik
         textureView.scaleX = -1f
     }
 
+    /** Surface.ROTATION_0..3: rotasi layar dari orientasi alami perangkat. */
     @Suppress("DEPRECATION")
-    private fun displayDegrees(): Int {
-        val rotation = activity.windowManager.defaultDisplay.rotation
-        return when (rotation) {
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_270 -> 270
-            else -> 0
-        }
-    }
+    private fun displayRotation(): Int = activity.windowManager.defaultDisplay.rotation
 }

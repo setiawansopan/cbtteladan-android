@@ -25,27 +25,45 @@ object PreviewMath {
     }
 
     /**
-     * Apakah gambar kamera yang tampil tegak berbentuk potret (tinggi > lebar)?
-     * Bingkai sensor selalu lanskap; arah tampilan ditentukan orientasi sensor
-     * dan rotasi layar (dalam derajat, searah jarum jam).
+     * Ukuran gambar tegak dalam orientasi ALAMI perangkat. Camera2 sudah memutar
+     * gambar sesuai SENSOR_ORIENTATION agar tegak pada orientasi alami (sensor
+     * 90/270 berarti potret); rotasi layar saat ini tidak ikut dihitung.
      */
-    fun isPortrait(sensorOrientation: Int, displayDegrees: Int, front: Boolean): Boolean {
-        val relative = if (front) {
-            (sensorOrientation + displayDegrees) % 360
-        } else {
-            (sensorOrientation - displayDegrees + 360) % 360
-        }
-        return relative % 180 == 90
-    }
+    fun uprightSize(sensorOrientation: Int, frameWidth: Int, frameHeight: Int): Pair<Int, Int> =
+        if (sensorOrientation % 180 == 90) frameHeight to frameWidth else frameWidth to frameHeight
+
+    /** Hasil perhitungan matriks: skala awal (x, y), putaran searah jarum jam, lalu skala seragam. */
+    data class Fit(val preX: Float, val preY: Float, val degrees: Float, val scale: Float)
 
     /**
-     * TextureView meregangkan gambar mengikuti bentuk view-nya. Skala tambahan
-     * (x, y) di sekitar titik tengah mengembalikan perbandingan asli gambar dan
-     * memotong kelebihannya (center crop), sehingga wajah tidak tampak gepeng.
+     * Matriks agar gambar tegak, tidak gepeng, dan memenuhi kotak (center crop).
+     *
+     * TextureView meregangkan gambar tegak (orientasi alami) ke seluruh view.
+     * Urutan: kembalikan ke ukuran asli (preX, preY), putar mengimbangi rotasi
+     * layar (tablet yang dipakai lanskap, rotasi 1 atau 3), lalu skala seragam
+     * sampai kotak penuh. [rotationIndex] = Surface.ROTATION_* (0-3);
+     * [extraTurns] = putaran tambahan 90 derajat pilihan siswa (ketuk kotak).
      */
-    fun cropScale(contentWidth: Int, contentHeight: Int, viewWidth: Int, viewHeight: Int): Pair<Float, Float> {
-        if (contentWidth <= 0 || contentHeight <= 0 || viewWidth <= 0 || viewHeight <= 0) return 1f to 1f
-        val uniform = max(viewWidth.toFloat() / contentWidth, viewHeight.toFloat() / contentHeight)
-        return uniform * contentWidth / viewWidth to uniform * contentHeight / viewHeight
+    fun fit(uprightWidth: Int, uprightHeight: Int, viewWidth: Int, viewHeight: Int, rotationIndex: Int, extraTurns: Int = 0): Fit {
+        if (uprightWidth <= 0 || uprightHeight <= 0 || viewWidth <= 0 || viewHeight <= 0) return Fit(1f, 1f, 0f, 1f)
+        val turns = Math.floorMod(rotationIndex + extraTurns, 4)
+        val sideways = turns % 2 == 1
+        val shownWidth = if (sideways) uprightHeight else uprightWidth
+        val shownHeight = if (sideways) uprightWidth else uprightHeight
+        val uniform = max(viewWidth.toFloat() / shownWidth, viewHeight.toFloat() / shownHeight)
+        return Fit(
+            preX = uprightWidth.toFloat() / viewWidth,
+            preY = uprightHeight.toFloat() / viewHeight,
+            degrees = compensationDegrees(turns),
+            scale = uniform,
+        )
+    }
+
+    /** Putaran searah jarum jam untuk [turns] kali 90 derajat rotasi layar (0, -90, 180, 90). */
+    fun compensationDegrees(turns: Int): Float = when (Math.floorMod(turns, 4)) {
+        1 -> -90f
+        2 -> 180f
+        3 -> 90f
+        else -> 0f
     }
 }
