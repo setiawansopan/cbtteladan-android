@@ -66,6 +66,12 @@
     <string name="exit">Keluar</string>
     <string name="refresh">Refresh</string>
     <string name="bar_version">v%1$s · %2$s</string>
+    <string name="bar_version_update">v%1$s · ada versi baru</string>
+    <string name="update_title_available">Versi baru tersedia</string>
+    <string name="update_title_required">Perbarui aplikasi dulu</string>
+    <string name="update_message_available">Versi %1$s sudah tersedia (kamu memakai %2$s). Sebaiknya perbarui sebelum ujian.</string>
+    <string name="update_message_required">Versi %1$s sudah tidak didukung server ujian. Perbarui ke versi terbaru sebelum masuk ujian.</string>
+    <string name="update_download">Unduh versi baru</string>
     <string name="bar_wifi">Wi-Fi</string>
     <string name="bar_cell">Data</string>
     <string name="bar_online">Online</string>
